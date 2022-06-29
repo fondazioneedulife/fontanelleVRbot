@@ -18,6 +18,7 @@
 ##////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 from subprocess import IDLE_PRIORITY_CLASS
+from numpy import argsort
 from telegram import *
 from telegram.ext import *
 from math import radians, cos, sin, asin, sqrt
@@ -162,7 +163,7 @@ def messageHandler(update: Update, context: CallbackContext):
         buttons = [[KeyboardButton(English)], [KeyboardButton(Italiano)]]
         testo = "!WELCOME!"
         context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-                             
+"""                      
 def distanza(update: Update, context: CallbackContext) -> None:
     try:
         lat1 = update.message.location.latitude
@@ -170,8 +171,6 @@ def distanza(update: Update, context: CallbackContext) -> None:
         d = []
         for i in range(0,len(coord_x)):
             d.append(dist(lat1,lon1,coord_x[i],coord_y[i]))
-        #print(lat1,lon1)
-        #print(coord_x[i],coord_y[i])
         e = d[:]
         d.sort()
         ind = 0
@@ -182,8 +181,8 @@ def distanza(update: Update, context: CallbackContext) -> None:
         if context.bot_data["lingua"] == "it":
             testo_via = "La fontanella più vicina è: " + nome_via[ind]
             testo_dist = "\nDistanza: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\ncircoscrizioni: " + circoscrizioni[ind]
-            testo_denominazioni= "\ndenominazione: " + denominazioni[ind]
+            testo_CIRCOSCRIZIONI= "\nCircoscrizioni: " + circoscrizioni[ind]
+            testo_denominazioni= "\nDenominazione: " + denominazioni[ind]
             context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
             update.message.reply_location(coord_x[i], coord_y[i])
         elif context.bot_data["lingua"] == "en":
@@ -194,26 +193,23 @@ def distanza(update: Update, context: CallbackContext) -> None:
             context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
             update.message.reply_location(coord_x[i], coord_y[i])
     except:
-        #print(exception)
         testo_try = "Attenzione!!!\nInviare solo la posizione attuale.\nInterrompere la condivisione della posizione in tempo reale."
         context.bot.send_message(chat_id=update.effective_chat.id, text=testo_try)
-
+"""
 def messaggio(update: Update, context: CallbackContext):
-    context.bot_data["sc"] = False
-    via = update.message.text
-    #print(via)
+    print("MESSAGGIO********************")
+    via = ""
+    for i in context.args:
+        via+=i+" "
+
     geolocator = Nominatim(user_agent="Fontanelle_Verona")
     location = geolocator.geocode(via)
-    #print(location.address)
-    #print((location.latitude, location.longitude))
     try:
         lat1 = location.latitude
         lon1 = location.longitude
         d = []
         for i in range(0,len(coord_x)):
             d.append(dist(lat1,lon1,coord_x[i],coord_y[i]))
-        #print(lat1,lon1)
-        #print(coord_x[i],coord_y[i])
         e = d[:]
         d.sort()
         ind = 0
@@ -221,20 +217,43 @@ def messaggio(update: Update, context: CallbackContext):
             if d[0]==e[i]:
                 ind = i
                 break
-        if context.bot_data["lingua"] == "it":
-            testo_via = "La fontanella più vicina è: " + nome_via[ind]
-            testo_dist = "\nDistanza: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\ncircoscrizioni: " + circoscrizioni[ind]
-            testo_denominazioni= "\ndenominazione: " + denominazioni[ind]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
-            update.message.reply_location(coord_x[i], coord_y[i])
-        elif context.bot_data["lingua"] == "en":
-            testo_via = "The closest fontanel is: " + nome_via[ind]
-            testo_dist = "\nDistance: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\nCircumscriptions: " + circoscrizioni[ind]
-            testo_denominazioni= "\nName: " + denominazioni[ind]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
-            update.message.reply_location(coord_x[i], coord_y[i])
+        testo_via = "La fontanella più vicina è: " + nome_via[ind]
+        testo_dist = "\nDistanza: " + str(round(d[0],2)) + " m"
+        testo_CIRCOSCRIZIONI= "\ncircoscrizioni: " + circoscrizioni[ind]
+        testo_denominazioni= "\ndenominazione: " + denominazioni[ind]
+        context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
+        update.message.reply_location(coord_x[i], coord_y[i])
+    except:
+        testo_try = "Error 404"
+        context.bot.send_message(chat_id=update.effective_chat.id, text=testo_try)
+
+def message(update: Update, context: CallbackContext):
+    print("MESSAGGIO********************")
+    via = ""
+    for i in context.args:
+        via+=i+" "
+
+    geolocator = Nominatim(user_agent="Fontanelle_Verona")
+    location = geolocator.geocode(via)
+    try:
+        lat1 = location.latitude
+        lon1 = location.longitude
+        d = []
+        for i in range(0,len(coord_x)):
+            d.append(dist(lat1,lon1,coord_x[i],coord_y[i]))
+        e = d[:]
+        d.sort()
+        ind = 0
+        for i in range(0,len(d)):
+            if d[0]==e[i]:
+                ind = i
+                break
+        testo_via = "The closest fontanel is: " + nome_via[ind]
+        testo_dist = "\nDistance: " + str(round(d[0],2)) + " m"
+        testo_CIRCOSCRIZIONI= "\nCircumscriptions: " + circoscrizioni[ind]
+        testo_denominazioni= "\nName: " + denominazioni[ind]
+        context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
+        update.message.reply_location(coord_x[i], coord_y[i])
     except:
         testo_try = "Error 404"
         context.bot.send_message(chat_id=update.effective_chat.id, text=testo_try)
@@ -252,9 +271,15 @@ def main():
     global dispatcher
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler("start", startCommand))
+    dispatcher.add_handler(CommandHandler("map_it", mappa_it))
+    dispatcher.add_handler(CommandHandler("map_en", mappa_en))
+    ##dispatcher.add_handler(CommandHandler("invia_pos",distanza ))
+    dispatcher.add_handler(CommandHandler("invia_via",messaggio ))
+    dispatcher.add_handler(CommandHandler("send_street",message ))
     dispatcher.bot_data = {"lingua" : "", "sc" : False}
     dispatcher.add_handler(MessageHandler(Filters.text, messageHandler))
     dispatcher.add_handler(MessageHandler(Filters.text, echo))
+    
     updater.start_polling()
     updater.idle()
 
