@@ -5,6 +5,11 @@ Questo bot ti consentirà di vedere una mappa di tutte le fontanelle, oppure dir
 Una volta individuata la fontanella desiderata questo bot offre anche le indicazioni tramite google maps per raggiungerla.
 Tutto questo sia in Italiano che in Inglese!
 Buona bevuta sostenibile! :)
+
+<img src= "https://drive.google.com/thumbnail?id=1S5GvxEzfAyp8vPuMO_h5sTEJO1s6nVyn">
+
+![Drag Racing](https://drive.google.com/thumbnail?id=1S5GvxEzfAyp8vPuMO_h5sTEJO1s6nVyn)
+
 ## Eseguire il progetto
 Scaricare il database utilizzato al seguente link:
 https://drive.google.com/file/d/1An9twSbbyhUQytHNN-kDOwX7u7m10laV/view?usp=sharing
