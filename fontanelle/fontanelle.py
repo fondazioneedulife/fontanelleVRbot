@@ -7,59 +7,121 @@
 ##Il nostro bot sarà la salvezza per quelle persone o animali che stanno morendo di sete,
 ##questo bot ti consentirà di vedere una mappa di tutte le fontanelle, oppure dirti la posizione della fontana più vicina,
 ##con la quale poi potresti, volendo, avere indicazioni tramite google maps.
-##Tutto questo sia in Italiano che in Inglese!
+##Tutto questo sia in italiano che in Inglese!
 ##Buona bevuta sostenibile! :)
 ##////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ##Our bot is going be the saving for those people of animals that are dying of thirst,
 ##this bot will allow you to see a map of all public fountain, or telling you the position of the nearest fountain to you,
 ##and use google maps to get to it.
-##All this both in Italian and in English!
+##All this both in Italian and in english!
 ##Have a good drink! :)
 ##////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-from subprocess import IDLE_PRIORITY_CLASS
 from telegram import *
 from telegram.ext import *
-from math import radians, cos, sin, asin, sqrt
 import sqlite3
-from requests import *
-from geopy.geocoders import Nominatim
+from math import radians, cos, sin, asin, sqrt
 
 #var of bottons#
-Italiano = "Italiano  🇮🇹"
-Fvicina_it = "Indicazioni per la fontanella più vicina  ➤"
-Fverona_it = "Mappa delle fontanelle di Verona  🗺"
-Ritorno_it="Cambia lingua  ⇦"
-English = "English 🇬🇧 / 🇺🇸"
-Fvicina_en = "Directions to the nearest drikning fountain ➤"
-Fverona_en = "Map of Verona's drinking fountains 🗺"
-Ritorno_en="Change language ⇦"
-condi_pos_it="condividi la posizione"
-condi_pos_en="share your position"
-scriv_pos_it="scrivi la tua posizione"
-scriv_pos_en="type your position"
-indi_pos_it="vai indietro"
-indi_pos_en="return"
-tutorial_it="tutorial in italiano"
-tutorial_en="tutorial in inglish"
-tutorial_indietro_it="torna indietro"
-tutorial_indietro_en="go back"
+
+#italiano
+italiano = "Italiano  🇮🇹"
+fontanella_vicina_it = "Indicazioni per la fontanella più vicina  ➤"
+fontanelle_Verona_it = "Mappa delle fontanelle di Verona  🗺"
+cambia_lingua_it="Cambia lingua / Change language\n⇦ 🇮🇹 / 🇬🇧 / 🇺🇸"
+tutorial_it="Come inviare la posizione 🔧"
+indietro_it="Torna indietro ⇦"
+tutorial_ios_it=" iOS "
+tutorial_android_it="🤖  Android  🤖"
+tutorial_indietro_it="Torna indietro  ⇦"
+quiz_it="Quiz 📝"
+
+#inglese
+inglese = "English 🇬🇧 / 🇺🇸"
+fontanella_vicina_en = "Directions to the nearest drinking fountain ➤"
+fontanelle_Verona_en = "Map of Verona's drinking fountains 🗺"
+cambia_lingua_en="Change language / Cambia lingua\n⇦ 🇮🇹 / 🇬🇧 / 🇺🇸"
+tutorial_en="Tutorial 🔧"
+indietro_en="Go back ⇦"
+tutorial_ios_en="  iOS  "
+tutorial_android_en="🤖 Android 🤖"
+tutorial_indietro_en="Go back  ⇦"
+quiz_en="Quiz  📝"
 
 ####funtions###
-def mappa_it(update: Update, context: CallbackContext):
-    update.message.reply_text(
-    'Fontanelle presenti a Verona.',
-    reply_markup=InlineKeyboardMarkup([
-    [InlineKeyboardButton(text='mappa', url='http://u.osmfr.org/m/780217/')],]))
 
-def mappa_en(update: Update, context: CallbackContext):
-    update.message.reply_text(
-    'Fountains of Verona.',
-    reply_markup=InlineKeyboardMarkup([
-    [InlineKeyboardButton(text='map', url='http://u.osmfr.org/m/780217/')],]))
+def startCommand(update: Update, context: CallbackContext) -> None:
+    diz(update, context)
+    aggiungi_dizionario(update, context, dizionario)
+    buttons = [[KeyboardButton(italiano)], [KeyboardButton(inglese)]]
+    testo = "Benvenuto nel nostro bot\nScegli la lingua 🇮🇹"
+    context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+    testo = "Welcome to our bot\nChose the language 🇬🇧 / 🇺🇸"
+    context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
 
+def diz(update: Update, context: CallbackContext):
+    global dizionario
+    dizionario = {
+        "chat_id" : update.effective_chat.id,
+        "lingua" : context.bot_data["lingua"]
+    }
+    
+def aggiungi_dizionario(update: Update, context: CallbackContext, dizionario):
+    if len(lista) == 0:
+       lista.append(dizionario)
+    trovato = False
+    for i in range(len(lista)):
+        if(lista[i]['chat_id'] == update.effective_chat.id):
+            trovato = True
+            dizionario = {
+                "chat_id" : update.effective_chat.id,
+                "lingua" : context.bot_data["lingua"]
+            }
+            lista[i] = dizionario
+    if trovato == False:
+        lista.append(dizionario)
+    print(lista)
+    print("")
 
-def dist(lat1,lon1, lat2, lon2):
+def fontanella_vicina(update: Update, context: CallbackContext) -> None:
+    try:
+        global user_id
+        lat1 = update.message.location.latitude
+        lon1 = update.message.location.longitude
+        d = []
+        for i in range(0,len(coord_x)):
+            d.append(distanza(lat1,lon1,coord_x[i],coord_y[i]))
+        e = d[:]
+        d.sort()
+        ind = 0
+        for i in range(0,len(d)):
+            if d[0]==e[i]:
+                ind = i
+                break
+        for i in range (len(lista)):
+            if lista[i]["chat_id"] == update.effective_chat.id:
+                user_id = update.effective_chat.id
+                break
+        if lista[i]["lingua"] == "it":
+            testo_nome = "La fontanella più vicina è: " + denominazioni[ind]
+            testo_distanza = "\nDistanza: " + str(round(d[0])) + " m"
+            testo_circoscrizione= "\nCircoscrizione: " + circoscrizioni[ind]
+            testo_via= "\nVia: " + nome_via[ind]
+            context.bot.send_message(chat_id=user_id, text=testo_nome+testo_circoscrizione+testo_via+testo_distanza)
+            update.message.reply_location(coord_x[i], coord_y[i])
+        elif lista[i]["lingua"] == "en":
+            testo_nome = "The closest fontanel is: " + denominazioni[ind]
+            testo_distanza = "\nDistance: " + str(round(d[0])) + " m"
+            testo_circoscrizione= "\nCircumscriptions: " + circoscrizioni[ind]
+            testo_via= "\nStreet name: " + nome_via[ind]
+            context.bot.send_message(chat_id=user_id, text=testo_nome+testo_circoscrizione+testo_via+testo_distanza)
+            update.message.reply_location(coord_x[i], coord_y[i])
+    except:
+        #print(exception)
+        testo_try = "Error 404"
+        context.bot.send_message(chat_id=update.effective_chat.id, text=testo_try)
+
+def distanza(lat1,lon1, lat2, lon2):
     lon1 = radians(lon1)
     lon2 = radians(lon2)
     lat1 = radians(lat1)
@@ -71,195 +133,196 @@ def dist(lat1,lon1, lat2, lon2):
     r = 6371
     return((c * r)*1000)
 
-def startCommand(update: Update, context: CallbackContext) -> None:
-    buttons = [[KeyboardButton(English)], [KeyboardButton(Italiano)]]
-    testo = "!WELCOME!"
-    context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+def mappa_it(update: Update, context: CallbackContext):
+    update.message.reply_text(
+    'Clicca qua ⇩',
+    reply_markup=InlineKeyboardMarkup([
+    [InlineKeyboardButton(text='mappa', url='http://u.osmfr.org/m/780217/')],]))
+
+def send_tutorial_ios_it(update, context):
+    chat_id = update.message.chat_id
+    document1 = open('tutorial_ios_it.pdf', 'rb')
+    context.bot.send_document(chat_id, document1)
+
+def send_tutorial_android_it(update, context):
+    chat_id = update.message.chat_id
+    document1 = open('tutorial_android_ita.pdf', 'rb')
+    context.bot.send_document(chat_id, document1)
+
+def mappa_en(update: Update, context: CallbackContext):
+    update.message.reply_text(
+    'Click here ⇩',
+    reply_markup=InlineKeyboardMarkup([
+    [InlineKeyboardButton(text='map', url='http://u.osmfr.org/m/780217/')],]))
+
+def send_tutorial_ios_en(update, context):
+    chat_id = update.message.chat_id
+    document1 = open('tutorial_ios_en.pdf', 'rb')
+    context.bot.send_document(chat_id, document1)
+
+def send_tutorial_android_en(update, context):
+    chat_id = update.message.chat_id
+    document1 = open('tutorial_android_en.pdf', 'rb')
+    context.bot.send_document(chat_id, document1)
 
 def messageHandler(update: Update, context: CallbackContext):
+    global lista
+    if len(lista) > 100:
+        lista = []
+        diz(update, context)
+        aggiungi_dizionario(update, context, dizionario)
     
-    if context.bot_data["sc"] == True:
-        messaggio(update, context)
-    #Italiano
-    if Italiano in update.message.text:
-        context.bot_data["lingua"] = "it"
-        buttons = [[KeyboardButton(Fvicina_it)], [KeyboardButton(Fverona_it)], [KeyboardButton(Ritorno_it)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Benvenuto!!!\nQuesto bot ti permette di trovare la fontanella più vicina a te.", reply_markup=ReplyKeyboardMarkup(buttons))
-       
-    if Fvicina_it in update.message.text:  
-        testo = "Invia la tua posizione"
-        buttons = [[KeyboardButton(condi_pos_it)], [KeyboardButton(scriv_pos_it)], [KeyboardButton(indi_pos_it)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-        dispatcher.add_handler(MessageHandler(Filters.location, distanza))
-
-    if indi_pos_it in update.message.text:
-        testo = "Scegli:"
-        buttons = [[KeyboardButton(Fvicina_it)], [KeyboardButton(Fverona_it)], [KeyboardButton(Ritorno_it)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-        
-    if condi_pos_it in update.message.text:
-        testo = "Invia la tua posizione oppure guarda il tutorial su come inviarla"
-        buttons = [[KeyboardButton(tutorial_it)], [KeyboardButton(tutorial_indietro_it)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-
-    if scriv_pos_it in update.message.text:
-        context.bot_data["sc"] = True
-        testo = "Scrivi la via:"
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo)
-
-    if tutorial_indietro_it in update.message.text:
-        testo = "Condividi la posizione o scrivila"
-        buttons = [[KeyboardButton(condi_pos_it)], [KeyboardButton(scriv_pos_it)], [KeyboardButton(indi_pos_it)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+    presente = False
     
-    if Fverona_it in update.message.text:
-        mappa_it(update, context)
-
-    if Ritorno_it in update.message.text:
-        context.bot_data["lingua"] = ""
-        buttons = [[KeyboardButton(English)], [KeyboardButton(Italiano)]]
-        testo = "!BENVENUTO!"
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-
-    #Inglese
-    if English in update.message.text:
-        context.bot_data["lingua"] = "en"
-        buttons = [[KeyboardButton(Fvicina_en)], [KeyboardButton(Fverona_en)],[KeyboardButton(Ritorno_en)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Welcome !!! \nThis bot allows you to find the fountain closest to you.", reply_markup=ReplyKeyboardMarkup(buttons))
-   
-    if Fvicina_en in update.message.text:
-        testo = "Choose:"
-        buttons = [[KeyboardButton(condi_pos_en)], [KeyboardButton(scriv_pos_en)], [KeyboardButton(indi_pos_en)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-        dispatcher.add_handler(MessageHandler(Filters.location, distanza))
-
-    if indi_pos_en in update.message.text:
-        testo = "Choose:"
-        buttons = [[KeyboardButton(Fvicina_en)], [KeyboardButton(Fverona_en)],[KeyboardButton(Ritorno_en)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-
-    if condi_pos_en in update.message.text:
-        testo = "Share your position or watch the tutorial on how to send it"
-        buttons = [[KeyboardButton(tutorial_en)], [KeyboardButton(tutorial_indietro_en)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-
-    if scriv_pos_en in update.message.text:
-        context.bot_data["sc"] = True
-        testo = "Write the street:"
-        buttons = [[KeyboardButton(Fvicina_it)], [KeyboardButton(Fverona_it)], [KeyboardButton(Ritorno_it)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+    for i in range (len(lista)):
+        if lista[i]["chat_id"] == update.effective_chat.id:
+            user_id = update.effective_chat.id
+            presente = True
+            break
         
-    if tutorial_indietro_en in update.message.text:
-        testo = "Choose:"
-        buttons = [[KeyboardButton(condi_pos_en)], [KeyboardButton(scriv_pos_en)], [KeyboardButton(indi_pos_en)]]
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-       
-    if Fverona_en in update.message.text:
-        mappa_en(update, context)
-
-    if Ritorno_en in update.message.text:
-        context.bot_data["lingua"] = "en"
-        buttons = [[KeyboardButton(English)], [KeyboardButton(Italiano)]]
-        testo = "!WELCOME!"
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
-                             
-def distanza(update: Update, context: CallbackContext) -> None:
-    try:
-        lat1 = update.message.location.latitude
-        lon1 = update.message.location.longitude
-        d = []
-        for i in range(0,len(coord_x)):
-            d.append(dist(lat1,lon1,coord_x[i],coord_y[i]))
-        #print(lat1,lon1)
-        #print(coord_x[i],coord_y[i])
-        e = d[:]
-        d.sort()
-        ind = 0
-        for i in range(0,len(d)):
-            if d[0]==e[i]:
-                ind = i
+    print(lista, "**********************", len(lista))
+    print(presente)
+    
+    if presente == False:
+        diz(update, context)
+        aggiungi_dizionario(update, context, dizionario)
+        for i in range (len(lista)):
+            if lista[i]["chat_id"] == update.effective_chat.id:
+                user_id = update.effective_chat.id
+                presente = True
                 break
-        if context.bot_data["lingua"] == "it":
-            testo_via = "La fontanella più vicina è: " + nome_via[ind]
-            testo_dist = "\nDistanza: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\ncircoscrizioni: " + circoscrizioni[ind]
-            testo_denominazioni= "\ndenominazione: " + denominazioni[ind]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
-            update.message.reply_location(coord_x[i], coord_y[i])
-        elif context.bot_data["lingua"] == "en":
-            testo_via = "The closest fontanel is: " + nome_via[ind]
-            testo_dist = "\nDistance: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\nCircumscriptions: " + circoscrizioni[ind]
-            testo_denominazioni= "\nName: " + denominazioni[ind]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
-            update.message.reply_location(coord_x[i], coord_y[i])
-    except:
-        #print(exception)
-        testo_try = "Attenzione!!!\nInviare solo la posizione attuale.\nInterrompere la condivisione della posizione in tempo reale."
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo_try)
+        
+    if presente == True:
+        #italiano
+        if italiano in update.message.text:
+            buttons = [[KeyboardButton(fontanella_vicina_it)], [KeyboardButton(fontanelle_Verona_it)], [KeyboardButton(quiz_it)], [KeyboardButton(cambia_lingua_it)]]
+            context.bot.send_message(chat_id=user_id, text="Benvenuto!!!\nQuesto bot ti permette di trovare la fontanella più vicina a te.", reply_markup=ReplyKeyboardMarkup(buttons))
 
-def messaggio(update: Update, context: CallbackContext):
-    context.bot_data["sc"] = False
-    via = update.message.text
-    #print(via)
-    geolocator = Nominatim(user_agent="Fontanelle_Verona")
-    location = geolocator.geocode(via)
-    #print(location.address)
-    #print((location.latitude, location.longitude))
-    try:
-        lat1 = location.latitude
-        lon1 = location.longitude
-        d = []
-        for i in range(0,len(coord_x)):
-            d.append(dist(lat1,lon1,coord_x[i],coord_y[i]))
-        #print(lat1,lon1)
-        #print(coord_x[i],coord_y[i])
-        e = d[:]
-        d.sort()
-        ind = 0
-        for i in range(0,len(d)):
-            if d[0]==e[i]:
-                ind = i
-                break
-        if context.bot_data["lingua"] == "it":
-            testo_via = "La fontanella più vicina è: " + nome_via[ind]
-            testo_dist = "\nDistanza: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\ncircoscrizioni: " + circoscrizioni[ind]
-            testo_denominazioni= "\ndenominazione: " + denominazioni[ind]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
-            update.message.reply_location(coord_x[i], coord_y[i])
-        elif context.bot_data["lingua"] == "en":
-            testo_via = "The closest fontanel is: " + nome_via[ind]
-            testo_dist = "\nDistance: " + str(round(d[0],2)) + " m"
-            testo_CIRCOSCRIZIONI= "\nCircumscriptions: " + circoscrizioni[ind]
-            testo_denominazioni= "\nName: " + denominazioni[ind]
-            context.bot.send_message(chat_id=update.effective_chat.id, text=testo_via+testo_CIRCOSCRIZIONI+testo_denominazioni+testo_dist)
-            update.message.reply_location(coord_x[i], coord_y[i])
-    except:
-        testo_try = "Error 404"
-        context.bot.send_message(chat_id=update.effective_chat.id, text=testo_try)
+        if quiz_it in update.message.text:
+            update.message.reply_text(
+            'Clicca qua ⇩',
+            reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(text='Quiz', url='https://take.panquiz.com/9767-6114-0080')],]))
 
-def echo(update: Update, context: CallbackContext) -> None:
-    testo = "Error 404"
-    context.bot.send_message(chat_id=update.effective_chat.id, text=testo)
+        if fontanella_vicina_it in update.message.text:
+            context.bot_data["lingua"] = "it"
+            diz(update, context)
+            aggiungi_dizionario(update, context, dizionario)
+            testo = "Invia la tua posizione 📍 o vedi il tutorial"
+            buttons = [[KeyboardButton(tutorial_it)], [KeyboardButton(indietro_it)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+            dispatcher.add_handler(MessageHandler(Filters.location, fontanella_vicina))
+
+        if indietro_it in update.message.text:
+            context.bot_data["lingua"] = ""
+            diz(update, context)
+            aggiungi_dizionario(update, context, dizionario)
+            testo = "Scegli un'opzione"
+            buttons = [[KeyboardButton(fontanella_vicina_it)], [KeyboardButton(fontanelle_Verona_it)], [KeyboardButton(quiz_it)], [KeyboardButton(cambia_lingua_it)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+
+        if tutorial_it in update.message.text:
+            testo = "1 -> clicca la '📎'\n2 -> clicca su 'posizione'\n3 -> clicca su 'invia la mia posizione attuale'"
+            buttons = [[KeyboardButton(tutorial_ios_it)], [KeyboardButton(tutorial_android_it)], [KeyboardButton(tutorial_indietro_it)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+            testo = "O scegli il tuo sistema operativo per scaricare un tutorial con immagini"
+            context.bot.send_message(chat_id=user_id, text=testo)
+        
+        if tutorial_ios_it in update.message.text:
+            send_tutorial_ios_it(update, context)
+        
+        if tutorial_android_it in update.message.text:
+            send_tutorial_android_it(update, context)
+        
+        if tutorial_indietro_it in update.message.text:
+            testo = "Scegli un'opzione"
+            buttons = [[KeyboardButton(fontanella_vicina_it)], [KeyboardButton(fontanelle_Verona_it)], [KeyboardButton(quiz_it)], [KeyboardButton(cambia_lingua_it)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+        
+        if fontanelle_Verona_it in update.message.text:
+            mappa_it(update, context)
+        
+        if cambia_lingua_it in update.message.text:
+            context.bot_data["lingua"] = ""
+            diz(update, context)
+            aggiungi_dizionario(update, context, dizionario)
+            buttons = [[KeyboardButton(italiano)], [KeyboardButton(inglese)]]
+            testo = "Scegli la lingua"
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+        
+        #Inglese
+        if inglese in update.message.text:
+            buttons = [[KeyboardButton(fontanella_vicina_en)], [KeyboardButton(fontanelle_Verona_en)],[KeyboardButton(quiz_en)],[KeyboardButton(cambia_lingua_en)]]
+            context.bot.send_message(chat_id=user_id, text="Welcome !!! \nThis bot allows you to find the nearest drinking fountain.", reply_markup=ReplyKeyboardMarkup(buttons))
+
+        if quiz_en in update.message.text:
+            update.message.reply_text(
+            'Click here ⇩',
+            reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(text='Quiz', url='https://take.panquiz.com/9309-2766-0228')],]))
+
+        if fontanella_vicina_en in update.message.text:
+            context.bot_data["lingua"] = "en"
+            diz(update, context)
+            aggiungi_dizionario(update, context, dizionario)
+            testo = "Send your location 📍 or watch the tutorial"
+            buttons = [[KeyboardButton(tutorial_en)], [KeyboardButton(indietro_en)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+            dispatcher.add_handler(MessageHandler(Filters.location, fontanella_vicina))
+
+        if indietro_en in update.message.text:
+            context.bot_data["lingua"] = ""
+            diz(update, context)
+            aggiungi_dizionario(update, context, dizionario)
+            testo = "Choose an option"
+            buttons = [[KeyboardButton(fontanella_vicina_en)], [KeyboardButton(fontanelle_Verona_en)],[KeyboardButton(quiz_en)],[KeyboardButton(cambia_lingua_en)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+
+        if tutorial_en in update.message.text:
+            testo = "1 -> click on '📎'\n2 -> click on 'position'\n3 -> click on 'send my current position'"
+            buttons = [[KeyboardButton(tutorial_ios_en)], [KeyboardButton(tutorial_android_en)], [KeyboardButton(tutorial_indietro_en)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+            testo = "Or choose your operating system to download a tutorial with pictures"
+            context.bot.send_message(chat_id=user_id, text=testo)
+        
+        if tutorial_ios_en in update.message.text:
+            send_tutorial_ios_en(update, context)
+        
+        if tutorial_android_en in update.message.text:
+            send_tutorial_android_en(update, context)
+        
+        if tutorial_indietro_en in update.message.text:
+            testo = "Choose an option"
+            buttons = [[KeyboardButton(fontanella_vicina_en)], [KeyboardButton(fontanelle_Verona_en)],[KeyboardButton(quiz_en)],[KeyboardButton(cambia_lingua_en)]]
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
+        
+        if fontanelle_Verona_en in update.message.text:
+            mappa_en(update, context)
+        
+        if cambia_lingua_en in update.message.text:
+            context.bot_data["lingua"] = ""
+            diz(update, context)
+            aggiungi_dizionario(update, context, dizionario)
+            buttons = [[KeyboardButton(italiano)], [KeyboardButton(inglese)]]
+            testo = "Choose language!"
+            context.bot.send_message(chat_id=user_id, text=testo, reply_markup=ReplyKeyboardMarkup(buttons))
 
 #main#  
 def main():
-    #updater = Updater("5592213185:AAHHK0F0zr_lLSxPqEVTMz2u0DJomafblQQ")
+    global dispatcher
+    global lista
+    lista = []
     with open("token.txt", "r") as f:
         TOKEN = f.read()
     updater = Updater(TOKEN)
-    global dispatcher
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler("start", startCommand))
-    dispatcher.bot_data = {"lingua" : "", "sc" : False}
+    dispatcher.bot_data = {"lingua" : ""}
     dispatcher.add_handler(MessageHandler(Filters.text, messageHandler))
-    dispatcher.add_handler(MessageHandler(Filters.text, echo))
     updater.start_polling()
     updater.idle()
 
 if __name__ == "__main__":
-    sc = False
     ##var_of_array##
     nome_via=[]
     circoscrizioni=[]
@@ -268,22 +331,16 @@ if __name__ == "__main__":
     coord_y = []
 
     con = sqlite3.connect("fontanelle.db")
-    a=con.execute(""" SELECT NOME_VIA FROM fontanelle_def; """).fetchall()
-    #print(a)
-    b=con.execute(""" select CIRCOSCRIZ from fontanelle_def; """).fetchall()
-    #print(b)
-    c=con.execute(""" select DENOMINAZI from fontanelle_def; """).fetchall()
-    #print(c)
-    d=con.execute(""" SELECT coordinate_x FROM fontanelle_def; """).fetchall()
-    #print(d)
-    e=con.execute(""" SELECT coordinate_y FROM fontanelle_def; """).fetchall()
-    #print(e)
+    n_via=con.execute(""" SELECT nome_via FROM fontanelle; """).fetchall()
+    circ=con.execute(""" SELECT circoscrizione from fontanelle; """).fetchall()
+    denom=con.execute(""" SELECT denominazione from fontanelle; """).fetchall()
+    x=con.execute(""" SELECT coordinate_x FROM fontanelle; """).fetchall()
+    y=con.execute(""" SELECT coordinate_y FROM fontanelle; """).fetchall()
 
-    for i in range(0,len(a)):
-        nome_via.append(a[i][0])
-        circoscrizioni.append(b[i][0])
-        denominazioni.append(c[i][0])
-        coord_x.append(e[i][0])
-        coord_y.append(d[i][0])
-
+    for i in range(0,len(n_via)):
+        nome_via.append(n_via[i][0])
+        circoscrizioni.append(circ[i][0])
+        denominazioni.append(denom[i][0])
+        coord_x.append(x[i][0])
+        coord_y.append(y[i][0])
     main()
