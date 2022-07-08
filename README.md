@@ -25,4 +25,4 @@ Per eseguire il progetto su windows:<br>
 <br>-verificare che python e pip siano chiamabili da terminale
 <br>-eseguire pip install python-telegram-bot
 <br>-pip install requests
--pip install geopy
+<br>-pip install geopy
